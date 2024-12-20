@@ -7,10 +7,13 @@ const PART1_LIMIT: usize = 2;
 const PART2_LIMIT: usize = 20;
 const PICOSEC_THRESHOLD: usize = 100;
 
-fn bfs(map: &Vec<Vec<u8>>, start: (usize, usize), end: (usize, usize)) -> Option<usize> {
+// Returns distance from start to every cell in the map
+fn bfs(map: &Vec<Vec<u8>>, start: (usize, usize)) -> Vec<Vec<Option<usize>>> {
     let height = map.len();
     let width = map[0].len();
     let mut visited = vec![vec![false; width]; height];
+
+    let mut distances: Vec<Vec<Option<usize>>> = vec![vec![None; width]; height];
 
     // (i, j, steps)
     let mut queue: VecDeque<(usize, usize, usize)> = VecDeque::new();
@@ -20,9 +23,7 @@ fn bfs(map: &Vec<Vec<u8>>, start: (usize, usize), end: (usize, usize)) -> Option
     while !queue.is_empty() {
         let (i, j, steps) = queue.pop_front().unwrap();
 
-        if i == end.0 && j == end.1 {
-            return Some(steps);
-        }
+        distances[i][j] = Some(steps);
 
         for (di, dj) in DIRECTIONS {
             let new_i = i as i32 + di;
@@ -39,7 +40,7 @@ fn bfs(map: &Vec<Vec<u8>>, start: (usize, usize), end: (usize, usize)) -> Option
         }
     }
 
-    None
+    distances
 }
 
 // Return the number of steps to reach end_pos from start_pos if we can cheat
@@ -82,23 +83,11 @@ fn solve(map: &Vec<Vec<u8>>, saving_threshold: usize, cheat_distance_limit: usiz
         }
     }
 
-    let normal_steps = bfs(&map, start, end).unwrap();
+    // Precompute distances from start and end
+    let distance_from_start: Vec<Vec<Option<usize>>> = bfs(&map, start);
+    let distance_from_end: Vec<Vec<Option<usize>>> = bfs(&map, end);
 
-    // Precompute distance from start to each cell
-    let mut distance_from_start: Vec<Vec<Option<usize>>> = vec![vec![None; width]; height];
-    for i in 0..height {
-        for j in 0..width {
-            distance_from_start[i][j] = bfs(&map, start, (i, j));
-        }
-    }
-
-    // Precompute distance from each cell to end
-    let mut distance_to_end: Vec<Vec<Option<usize>>> = vec![vec![None; width]; height];
-    for i in 0..height {
-        for j in 0..width {
-            distance_to_end[i][j] = bfs(&map, (i, j), end);
-        }
-    }
+    let normal_steps = distance_from_start[end.0][end.1].unwrap();
 
     // For a pair of coordinates, check if it is cheatable
     for i1 in 0..height {
@@ -110,9 +99,10 @@ fn solve(map: &Vec<Vec<u8>>, saving_threshold: usize, cheat_distance_limit: usiz
                             cheating_distance(&map, (i1, j1), (i2, j2), cheat_distance_limit);
 
                         if cheatable.is_some() {
+                            // If cheat distance is in the limit, calculate the steps using distance from start to i1, j1 + cheat steps + distance from end to i2, j2
                             let before_enter_cheat = distance_from_start[i1][j1].unwrap();
                             let cheat_steps = cheatable.unwrap();
-                            let after_exit_cheat = distance_to_end[i2][j2].unwrap();
+                            let after_exit_cheat = distance_from_end[i2][j2].unwrap();
 
                             let steps = before_enter_cheat + cheat_steps + after_exit_cheat;
 
