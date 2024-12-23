@@ -21,6 +21,8 @@ enum Cell {
 trait MapSimulation {
     fn simulate(&mut self, direction: Move) -> (usize, usize);
     fn boxes_sum(&self) -> usize;
+
+    #[allow(dead_code)]
     fn print(&self);
 }
 
@@ -292,8 +294,6 @@ impl MapSimulation for DoubleWideMap {
 
                     self.player = next_pos;
                 }
-
-                // self.print();
             }
         }
 
